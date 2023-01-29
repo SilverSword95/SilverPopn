@@ -129,6 +129,15 @@ uint8_t button_gpio(uint8_t id)
     return BUTTON_DEFS[id].sw_gpio;
 }
 
+typedef enum {
+    NORMAL,
+    SET_LED_LEVEL,
+    SET_RGB_LEVEL,
+    SET_FADING_LEVEL,
+} mode_t;
+
+mode_t run_mode = NORMAL;
+
 /* If a switch flips, it freezes for a while */
 #define DEBOUNCE_FREEZE_TIME_US 1000
 uint16_t button_read()
@@ -153,7 +162,8 @@ uint16_t button_read()
         }
     }
 
-    return buttons;
+    /* Hide 9 main button signals while in setting mode */
+    return run_mode == NORMAL ? buttons : (buttons & 0xFE00);
 }
 
 #define HID_EXPIRE_DURATION 1000000ULL
@@ -162,15 +172,6 @@ static bool hid_lights[BUTTON_NUM];
 
 static bool led_on[BUTTON_NUM];
 static uint8_t led_pwm[BUTTON_NUM];
-
-typedef enum {
-    NORMAL,
-    SET_LED_LEVEL,
-    SET_RGB_LEVEL,
-    SET_FADING_LEVEL,
-} mode_t;
-
-mode_t run_mode = NORMAL;
 
 static const uint8_t level_val[] = {0, 33, 77, 117, 150, 180, 205, 230, 255, 0, 0};
 static const uint8_t up_cycles[4] = {1, 20, 40, 60};
@@ -234,14 +235,19 @@ static void led_indicate(uint8_t id)
 
 static void update_mode()
 {
+    mode_t new_mode;
     if (sw_val[AUX_1] && !sw_val[AUX_2]) {
-        run_mode = SET_LED_LEVEL;
+        new_mode = SET_LED_LEVEL;
     } else if (!sw_val[AUX_1] && sw_val[AUX_2]) {
-        run_mode = SET_RGB_LEVEL;
+        new_mode = SET_RGB_LEVEL;
     } else if (sw_val[AUX_1] && sw_val[AUX_2]) {
-        run_mode = SET_FADING_LEVEL;
+        new_mode = SET_FADING_LEVEL;
     } else {
-        run_mode = NORMAL;
+        new_mode = NORMAL;
+    }
+    if (new_mode != run_mode) {
+        run_mode = new_mode;
+        led_demo(true);
     }
 }
 
