@@ -18,10 +18,15 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#define WS2812_PIN 28
-
-uint8_t logo_leds[] = {0, 1, 2};
-uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
+#if defined BOARD_POPN_PICO
+static const uint8_t ws2812_pin = 28;
+static const uint8_t logo_leds[] = {0, 1, 2};
+static const uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
+#else
+static const uint8_t ws2812_pin = 18;
+static const uint8_t logo_leds[] = {0, 1, 2};
+static const uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
+#endif
 
 static inline void put_pixel(uint32_t pixel_grb)
 {
@@ -142,6 +147,6 @@ void rgb_entry()
 void rgb_init()
 {
     uint offset = pio_add_program(pio0, &ws2812_program);
-    ws2812_program_init(pio0, 0, offset, WS2812_PIN, 800000, false);
+    ws2812_program_init(pio0, 0, offset, ws2812_pin, 800000, false);
     multicore_launch_core1(rgb_entry);
 }
