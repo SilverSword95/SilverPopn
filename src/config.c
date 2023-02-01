@@ -50,6 +50,7 @@ static void config_save()
     cfg_page = (cfg_page + 1) % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE);
     printf("Program Flash %d %8lx\n", cfg_page, old_cfg.magic);
     rgb_pause(true);
+    sleep_ms(1);
     uint32_t ints = save_and_disable_interrupts();
     if (cfg_page == 0) {
         flash_range_erase(CONFIG_SECTOR_OFFSET, FLASH_SECTOR_SIZE);

@@ -31,11 +31,6 @@ static const uint8_t logo_leds[] = {18, 19, 20, 21};
 static const uint8_t effect_leds[] = {46, 47, 48, 49, 50, 51, 52, 53};
 #endif
 
-static inline void put_pixel(uint32_t pixel_grb)
-{
-    pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
-}
-
 static const uint8_t level_val[] = {0, 32, 64, 96, 128, 160, 192, 224, 255};
 static uint8_t rgb_level = 0;
 
@@ -103,7 +98,7 @@ void update_led()
     }
 
     for (int i = 0; i < ARRAY_SIZE(led_buf); i++) {
-        put_pixel(led_buf[i]);
+        pio_sm_put_blocking(pio0, 0, led_buf[i] << 8u);
     }
 }
 
