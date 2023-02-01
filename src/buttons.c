@@ -68,10 +68,15 @@ typedef struct {
 
 static button_cfg_t *cfg;
 
+static void cfg_loaded()
+{
+    rgb_set_brightness(cfg->rgb_level);
+}
+
 static void init_cfg()
 {
     button_cfg_t def = {8, 8, 0, 0};
-    cfg = (button_cfg_t *)config_alloc(sizeof(def), &def);
+    cfg = (button_cfg_t *)config_alloc(sizeof(def), &def, cfg_loaded);
 }
 
 static uint16_t alpha[256];
@@ -173,7 +178,7 @@ static bool hid_lights[BUTTON_NUM];
 static bool led_on[BUTTON_NUM];
 static uint8_t led_pwm[BUTTON_NUM];
 
-static const uint8_t level_val[] = {0, 33, 77, 117, 150, 180, 205, 230, 255, 0, 0};
+static const uint8_t level_val[9] = {0, 33, 77, 117, 150, 180, 205, 230, 255};
 static const uint8_t up_cycles[4] = {1, 20, 40, 60};
 static const uint8_t down_cycles[5] = {1, 32, 64, 96, 128};
 
@@ -281,6 +286,7 @@ static void run_led_setup()
 static void run_rgb_setup()
 {
     read_value(&cfg->rgb_level);
+    rgb_set_brightness(cfg->rgb_level);
     led_indicate(cfg->rgb_level);
 }
 

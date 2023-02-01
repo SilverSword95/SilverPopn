@@ -7,6 +7,7 @@
 
 #include "buttons.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -20,12 +21,14 @@
 
 #if defined BOARD_POPN_PICO
 static const uint8_t ws2812_pin = 28;
+#define RGB_LED_NUM 10
 static const uint8_t logo_leds[] = {0, 1, 2};
 static const uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
 #else
 static const uint8_t ws2812_pin = 18;
-static const uint8_t logo_leds[] = {0, 1, 2};
-static const uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
+#define RGB_LED_NUM 60
+static const uint8_t logo_leds[] = {18, 19, 20, 21};
+static const uint8_t effect_leds[] = {46, 47, 48, 49, 50, 51, 52, 53};
 #endif
 
 static inline void put_pixel(uint32_t pixel_grb)
@@ -33,42 +36,72 @@ static inline void put_pixel(uint32_t pixel_grb)
     pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
 }
 
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b)
+static const uint8_t level_val[] = {0, 32, 64, 96, 128, 160, 192, 224, 255};
+static uint8_t rgb_level = 0;
+
+static inline uint32_t urgb_u32(uint32_t r, uint32_t g, uint32_t b)
 {
-    /* better gamma curve */
-    uint32_t r32 = (uint32_t)r * r;
-    uint32_t g32 = (uint32_t)g * g;
-    uint32_t b32 = (uint32_t)b * b;
-    return (g32 >> 8 << 16) | (r32 >> 8 << 8) | (b32 >> 8 << 0);
+    r = r * level_val[rgb_level] / 255;
+    g = g * level_val[rgb_level] / 255;
+    b = b * level_val[rgb_level] / 255;
+
+    /* better gamma */
+    r = (r + 1) * (r + 1) - 1;
+    g = (g + 1) * (g + 1) - 1;
+    b = (b + 1) * (b + 1) - 1;
+    return (g >> 8 << 16) | (r >> 8 << 8) | (b >> 8 << 0);
 }
 
 /* 6 segment regular hsv color wheel, better color cycle
  * https://www.arnevogel.com/rgb-rainbow/
  * https://www.instructables.com/How-to-Make-Proper-Rainbow-and-Random-Colors-With-/
  */
-uint32_t color_wheel(int index)
+#define COLOR_WHEEL_SIZE (256 * 6)
+static uint32_t color_wheel[COLOR_WHEEL_SIZE];
+static void generate_color_wheel()
 {
-    uint32_t section = index / 256 % 6;
-    uint8_t incr = index % 256;
-    uint8_t decr = 255 - incr;
-    if (section == 0) {
-        return urgb_u32(incr, 0, 255);
-    } else if (section == 1) {
-        return urgb_u32(255, 0, decr);
-    } else if (section == 2) {
-        return urgb_u32(255, incr, 0);
-    } else if (section == 3) {
-        return urgb_u32(decr, 255, 0);
-    } else if (section == 4) {
-        return urgb_u32(0, 255, incr);
-    } else {
-        return urgb_u32(0, decr, 255);
+    for (int i = 0; i < COLOR_WHEEL_SIZE; i++) {
+        uint32_t sector = i / 256 % 6;
+        uint8_t incr = i % 256;
+        uint8_t decr = 255 - incr;
+        if (sector == 0) {
+            color_wheel[i] = urgb_u32(incr, 0, 255);
+        } else if (sector == 1) {
+            color_wheel[i] = urgb_u32(255, 0, decr);
+        } else if (sector == 2) {
+            color_wheel[i] = urgb_u32(255, incr, 0);
+        } else if (sector == 3) {
+            color_wheel[i] = urgb_u32(decr, 255, 0);
+        } else if (sector == 4) {
+            color_wheel[i] = urgb_u32(0, 255, incr);
+        } else {
+            color_wheel[i] = urgb_u32(0, decr, 255);
+        }
     }
 }
 
-static uint32_t led_buf[sizeof(logo_leds) + sizeof(effect_leds)];
+void rgb_set_brightness(uint8_t level)
+{
+    if (rgb_level == level) {
+        return;
+    }
+    rgb_level = level;
+    generate_color_wheel();
+}
+
+static bool pio_paused = false;
+void rgb_pause(bool pause)
+{
+    pio_paused = pause;
+}
+
+static uint32_t led_buf[RGB_LED_NUM] = {0};
 void update_led()
 {
+    if (pio_paused) {
+        return;
+    }
+
     for (int i = 0; i < ARRAY_SIZE(led_buf); i++) {
         put_pixel(led_buf[i]);
     }
@@ -82,22 +115,15 @@ static uint32_t hid_expire_time = 0;
 #define RAINBOW_PITCH 151
 #define RAINBOW_SPEED_DOWN_INTERVAL 200000ULL
 uint32_t speed = RAINBOW_SPEED_MIN;
+
 void rainbow_update()
 {
     static uint32_t rotator = 0;
-    rotator += speed;
+    rotator = (rotator + speed) % COLOR_WHEEL_SIZE;
 
     for (int i = 0; i < sizeof(effect_leds); i++) {
-        led_buf[effect_leds[i]] = color_wheel(rotator + RAINBOW_PITCH * i);
-    }
-
-    if (time_us_64() < hid_expire_time) {
-        return;
-    }
-    /* When there's no HID light input, use Logo LEDs for rainbow flow */
-    uint32_t offset = rotator + RAINBOW_PITCH * sizeof(effect_leds);
-    for (int i = 0; i < sizeof(logo_leds); i++) {
-        led_buf[logo_leds[i]] = color_wheel(offset + RAINBOW_PITCH * i);
+        uint32_t index = (rotator + RAINBOW_PITCH * i) % COLOR_WHEEL_SIZE;
+        led_buf[effect_leds[i]] = color_wheel[index];
     }
 }
 
@@ -129,6 +155,11 @@ void rgb_update_logo(uint8_t r, uint8_t g, uint8_t b)
     hid_expire_time = time_us_64() + HID_EXPIRE_DURATION;
 }
 
+static void hid_update()
+{
+
+}
+
 void rgb_stimulate()
 {
     rainbow_speed_up();
@@ -138,6 +169,7 @@ void rgb_entry()
 {
     while (1) {
         rainbow_update();
+        hid_update();
         rainbow_speed_down();
         update_led();
         sleep_ms(10);
@@ -149,4 +181,5 @@ void rgb_init()
     uint offset = pio_add_program(pio0, &ws2812_program);
     ws2812_program_init(pio0, 0, offset, ws2812_pin, 800000, false);
     multicore_launch_core1(rgb_entry);
+    rgb_set_brightness(8);
 }

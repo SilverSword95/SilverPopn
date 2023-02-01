@@ -18,11 +18,12 @@
 
 #include "hardware/flash.h"
 #include "hardware/sync.h"
-#include "buttons.h"
+#include "rgb.h"
 
 static struct {
     size_t size;
     size_t offset;
+    void (*after_load)();
 } modules[8] = {0};
 static int module_num = 0;
 
@@ -48,6 +49,7 @@ static void config_save()
 
     cfg_page = (cfg_page + 1) % (FLASH_SECTOR_SIZE / FLASH_PAGE_SIZE);
     printf("Program Flash %d %8lx\n", cfg_page, old_cfg.magic);
+    rgb_pause(true);
     uint32_t ints = save_and_disable_interrupts();
     if (cfg_page == 0) {
         flash_range_erase(CONFIG_SECTOR_OFFSET, FLASH_SECTOR_SIZE);
@@ -55,6 +57,7 @@ static void config_save()
     flash_range_program(CONFIG_SECTOR_OFFSET + cfg_page * FLASH_PAGE_SIZE,
                         (uint8_t *)&old_cfg, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
+    rgb_pause(false);
 }
 
 static void load_default()
@@ -90,10 +93,18 @@ static void config_load()
     printf("Page Loaded %d %8lx\n", cfg_page, new_cfg.magic);
 }
 
+static void config_loaded()
+{
+    for (int i = 0; i < module_num; i++) {
+        modules[i].after_load();
+    }
+}
+
 void config_init()
 {
     config_load();
     config_loop();
+    config_loaded();
 }
 
 void config_loop()
@@ -110,11 +121,12 @@ void config_loop()
     }
 }
 
-void *config_alloc(size_t size, void *def)
+void *config_alloc(size_t size, void *def, void (*after_load)())
 {
     modules[module_num].size = size;
     size_t offset = module_num > 0 ? modules[module_num - 1].offset + size : 0;
     modules[module_num].offset = offset;
+    modules[module_num].after_load = after_load;
     module_num++;
     memcpy(default_cfg.data + offset, def, size); // backup the default
     return new_cfg.data + offset;

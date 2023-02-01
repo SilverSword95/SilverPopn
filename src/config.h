@@ -11,7 +11,7 @@
 void config_init();
 void config_loop();
 
-void *config_alloc(size_t size, void *def);
+void *config_alloc(size_t size, void *def, void (*after_load)());
 void config_request_save();
 
 #endif
