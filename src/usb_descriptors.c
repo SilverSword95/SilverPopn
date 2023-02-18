@@ -141,8 +141,8 @@ char const* string_desc_arr[] = {
     "Button 7",
     "Button 8",
     "Button 9",
-    "Button 10",
-    "Button 11",
+    "Aux 1",
+    "Aux 2",
     "Logo Red",
     "Logo Green",
     "Logo Blue"

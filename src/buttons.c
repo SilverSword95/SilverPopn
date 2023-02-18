@@ -16,40 +16,14 @@
 
 #include "rgb.h"
 #include "config.h"
+#include "board_defs.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 static const struct button {
     int8_t sw_gpio;
     int8_t led_gpio; /* led related to the button */
-} BUTTON_DEFS[] =
-{
-#if defined BOARD_POPN_PICO
-    {0, 1},
-    {2, 3},
-    {4, 5},
-    {6, 7},
-    {8, 9},
-    {10, 11},
-    {12, 13},
-    {14, 15},
-    {16, 18},
-    {26, -1},
-    {27, -1}
-#else
-    {0, 1},
-    {2, 3},
-    {4, 5},
-    {6, 7},
-    {8, 9},
-    {10, 11},
-    {12, 13},
-    {14, 15},
-    {17, 16},
-    {20, -1},
-    {19, -1}
-#endif
-};
+} BUTTON_DEFS[] = BUTTON_DEF;
 
 #define BUTTON_NUM (ARRAY_SIZE(BUTTON_DEFS))
 

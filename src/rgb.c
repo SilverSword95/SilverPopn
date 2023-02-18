@@ -17,22 +17,20 @@
 
 #include "ws2812.pio.h"
 
+#include "board_defs.h"
+
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#if defined BOARD_POPN_PICO
 static const uint8_t ws2812_pin = 28;
-#define RGB_LED_NUM 10
-static const uint8_t logo_leds[] = {0, 1, 2};
-static const uint8_t effect_leds[] = {3, 4, 5, 6, 7, 8, 9};
-#else
-static const uint8_t ws2812_pin = 18;
-#define RGB_LED_NUM 60
-static const uint8_t logo_leds[] = {18, 19, 20, 21};
-static const uint8_t effect_leds[] = {46, 47, 48, 49, 50, 51, 52, 53};
-#endif
+static const uint8_t logo_leds[] = RGB_LOGO_LEDS;
+static const uint8_t effect_leds[] = RGB_RAINBOW_LEDS;
 
 static const uint8_t level_val[] = {0, 32, 64, 96, 128, 160, 192, 224, 255};
 static uint8_t rgb_level = 0;
+
+static uint8_t logo_r = 0;
+static uint8_t logo_g = 0;
+static uint8_t logo_b = 0;
 
 static inline uint32_t urgb_u32(uint32_t r, uint32_t g, uint32_t b)
 {
@@ -91,7 +89,7 @@ void rgb_pause(bool pause)
 }
 
 static uint32_t led_buf[RGB_LED_NUM] = {0};
-void update_led()
+void drive_led()
 {
     if (pio_paused) {
         return;
@@ -143,16 +141,22 @@ void rainbow_speed_down()
 
 void rgb_update_logo(uint8_t r, uint8_t g, uint8_t b)
 {
-    uint32_t color = urgb_u32(r, g, b);
-    for (int i = 0; i < sizeof(logo_leds); i++) {
-        led_buf[logo_leds[i]] = color;
-    }
+    logo_r = r;
+    logo_g = g;
+    logo_b = b;
     hid_expire_time = time_us_64() + HID_EXPIRE_DURATION;
 }
 
 static void hid_update()
 {
+    if (time_us_64() > hid_expire_time) {
+        return;
+    }
 
+    uint32_t color = urgb_u32(logo_r, logo_g, logo_b);
+    for (int i = 0; i < sizeof(logo_leds); i++) {
+        led_buf[logo_leds[i]] = color;
+    }
 }
 
 void rgb_stimulate()
@@ -166,7 +170,7 @@ void rgb_entry()
         rainbow_update();
         hid_update();
         rainbow_speed_down();
-        update_led();
+        drive_led();
         sleep_ms(10);
     }
 }
