@@ -21,7 +21,6 @@
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-static const uint8_t ws2812_pin = 28;
 static const uint8_t logo_leds[] = RGB_LOGO_LEDS;
 static const uint8_t effect_leds[] = RGB_RAINBOW_LEDS;
 
@@ -178,7 +177,7 @@ void rgb_entry()
 void rgb_init()
 {
     uint offset = pio_add_program(pio0, &ws2812_program);
-    ws2812_program_init(pio0, 0, offset, ws2812_pin, 800000, false);
+    ws2812_program_init(pio0, 0, offset, RGB_LED_PIN, 800000, false);
     multicore_launch_core1(rgb_entry);
     rgb_set_brightness(8);
 }

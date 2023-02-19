@@ -48,7 +48,7 @@
     {19, -1} \
 }
 
-#define RGB_LED_PIN = 18;
+#define RGB_LED_PIN 18
 #define RGB_LED_NUM 60
 #define RGB_LOGO_LEDS  {18, 19, 20, 21}
 #define RGB_RAINBOW_LEDS {46, 47, 48, 49, 50, 51, 52, 53}
