@@ -1,4 +1,4 @@
-# Popn Pico Firmeware
+# Popn Pico Firmware
 
 Features:
 * 1000Hz polling rate.
