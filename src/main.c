@@ -24,27 +24,22 @@ bool button_lights[BUTTON_LIGHT_MAX_NUM] = {0};
 struct report
 {
     uint16_t buttons;
-    uint8_t joy0;
-    uint8_t joy1;
 } report;
 
 void main_loop()
 {
-    if (tud_hid_ready())
-    {
-        report.joy0 = 0;
-        report.joy1 = 0;
+    if (tud_hid_ready()) {
         tud_hid_n_report(0x00, REPORT_ID_JOYSTICK, &report, sizeof(report));
     }
 }
 
 void boot_check()
 {
-    uint64_t key1 = (1 << (button_num() - 1));
-    uint64_t key2 = (1 << (button_num() - 2));
+    uint64_t key1 = (1 << 9);
+    uint64_t key2 = (1 << 10);
     uint64_t buttons = button_read();
     if ((buttons & key1) && (buttons & key2)) {
-        reset_usb_boot(button_gpio(button_num() - 1), 2);
+        reset_usb_boot(0, 2);
     }
 }
 
@@ -93,15 +88,15 @@ void tud_hid_set_report_cb(uint8_t itf, uint8_t report_id,
 {
     if ((report_id == REPORT_ID_LIGHTS) &&
         (report_type == HID_REPORT_TYPE_OUTPUT)) {
-        if (bufsize < button_num() + 3) { /* including logo rgb */
+        if (bufsize < 13 + 3) { /* including logo rgb */
             return;
         }
-        for (int i = 0; i < button_num(); i++) {
+        for (int i = 0; i < 13; i++) {
             button_lights[i] = (buffer[i] > 0);
         }
-        button_set_light(buffer, button_num());
+        button_set_light(buffer, 13);
 
-        uint8_t const *rgb = buffer + button_num();
+        uint8_t const *rgb = buffer + 13;
         rgb_update_logo(rgb[0], rgb[1], rgb[2]);
     }
 }

@@ -19,7 +19,9 @@
     {14, 15}, \
     {16, 18}, \
     {26, -1}, \
-    {27, -1} \
+    {27, -1}, \
+    {21, -1}, \
+    {22, -1} \
 }
 
 #define RGB_LED_PIN 28
@@ -33,7 +35,7 @@
  */
 
 /* A button consists of a switch and an LED
-   9 main buttons + 2 aux buttons. */
+   9 main buttons + 2 aux buttons + [if more buttons]. */
 #define BUTTON_DEF { \
     {0, 1}, \
     {2, 3}, \
@@ -45,7 +47,9 @@
     {14, 15}, \
     {17, 16}, \
     {20, -1}, \
-    {19, -1} \
+    {19, -1}, \
+    {21, -1}, \
+    {22, -1} \
 }
 
 #define RGB_LED_PIN 18
