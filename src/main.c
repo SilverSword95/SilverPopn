@@ -18,8 +18,12 @@
 #include "rgb.h"
 #include "config.h"
 
+#include "maple.c" //Dreamcast mode
+#include "psx.c" //PlayStation mode
+
 #define BUTTON_LIGHT_MAX_NUM 32 /* Must be larger than number of buttons */
 bool button_lights[BUTTON_LIGHT_MAX_NUM] = {0};
+bool psx_enabled = 0;
 
 struct report
 {
@@ -48,7 +52,8 @@ void init()
     board_init();
     tusb_init();
     button_init();
-    rgb_init();
+	if (psx_enabled) PSX_Init(); //PlayStation mode cannot be working with RGB
+    else rgb_init();
     boot_check();
     stdio_init_all();
     config_init();
@@ -56,16 +61,23 @@ void init()
 
 int main(void)
 {
+  // Dreamcast/PlayStation/USB Mode Switching
+  if (!(gpio_get(27)) && gpio_get(26)) {
+    dreamcast_main();
+  } else {
+	if (!(gpio_get(26)) && gpio_get(27)) psx_enabled = 1;
     init();
 
     while (1)
     {
         tud_task();
         report.buttons = button_read();
+		if (psx_enabled) PSX_Task(report.buttons);
         main_loop();
         button_update();
         config_loop();
     }
+  }
 
     return 0;
 }
