@@ -1,4 +1,4 @@
-# Popn Pico Firmware
+# SilverPopn Firmware
 
 Features:
 * 1000Hz polling rate.
@@ -7,7 +7,8 @@ Features:
 * Light brightness control.
 * Light fade in/out control.
 * Configuration save.
-* Customizable through board_defs.h
+* Customizable through board_defs.h [WIP]
 
-Note:
-Old (v1.1 and earlier) PCB of Popn Pico controller needs a small modification to use this firmware.
+Additional features:
+* Dreamcast mode (supports pop'n 1-4, LED and VMU)
+* PlayStation mode (supports all PS1 and PS2 games and LED) [WIP]
