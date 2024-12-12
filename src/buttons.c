@@ -220,9 +220,9 @@ static void update_mode()
     if (sw_val[AUX_1] && !sw_val[AUX_2]) {
         new_mode = SET_LED_LEVEL;
     } else if (!sw_val[AUX_1] && sw_val[AUX_2]) {
-        new_mode = SET_RGB_LEVEL;
-    } else if (sw_val[AUX_1] && sw_val[AUX_2]) {
         new_mode = SET_FADING_LEVEL;
+    } else if (sw_val[AUX_1] && sw_val[AUX_2]) {
+        new_mode = SET_RGB_LEVEL;
     } else {
         new_mode = NORMAL;
     }

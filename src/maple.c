@@ -3,8 +3,8 @@
  * Dreamcast Maple Bus Transiever example for Raspberry Pi Pico (RP2040)
  * (C) Charlie Cole 2021
  *
- * Dreamcast controller connector pin 1 (Data) to 14 (PICO_PIN1_PIN)
- * Dreamcast controller connector pin 5 (Data) to 15 (PICO_PIN5_PIN)
+ * Dreamcast controller connector pin 1 (Data) to 10 (PICO_PIN1_PIN)
+ * Dreamcast controller connector pin 5 (Data) to 11 (PICO_PIN5_PIN)
  * Dreamcast controller connector pin 2 (5V) to VSYS (I did via diode so could power from either USB/VBUS or Dreamcast safely)
  * Dreamcast controller connector pins 3 (GND) and 4 (Sense) to GND
  * GPIO pins for buttons 0-9,14-21 (uses internal pullups, switch to GND. See ButtonInfos)
@@ -42,8 +42,8 @@
 #define FLASH_OFFSET (512 * 1024) // How far into Flash to store the memory card data
 								  // We only have around 16Kb of code so assuming this will be fine
 
-#define PICO_PIN1_PIN	14
-#define PICO_PIN5_PIN	15
+#define PICO_PIN1_PIN	10
+#define PICO_PIN5_PIN	11
 #define PICO_PIN1_PIN_RX	PICO_PIN1_PIN
 #define PICO_PIN5_PIN_RX	PICO_PIN5_PIN
 
@@ -208,10 +208,10 @@ static ButtonInfo ButtonInfos[NUM_BUTTONS]=
 	{ 6, 7, 0x0080, 0 },	// Blue left
 	{ 8, 9, 0x0004, 0 },	// Red centre
 	{ 14, 15, 0x0400, 0 },	// Blue right
-	{ 16, 17, 0x0002, 0 },	// Green right
-	{ 18, 19, 0x0200, 0 },	// Yellow right
-	{ 20, 21, 0x0001, 0 },	// White right
-	{ 26, -1, 0x0008, 0 }	// Start
+	{ 17, 16, 0x0002, 0 },	// Green right
+	{ 19, 18, 0x0200, 0 },	// Yellow right
+	{ 21, 20, 0x0001, 0 },	// White right
+	{ 26, 13, 0x0008, 0 }	// Start
 };
 
 // Buffers

@@ -10,6 +10,12 @@
 #include <stdbool.h>
 #include "hardware/flash.h"
 
+#pragma once
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 void button_init();
 uint8_t button_num();
 uint8_t button_gpio(uint8_t id);
@@ -18,5 +24,9 @@ uint16_t button_read();
 
 void button_update();
 void button_set_light(uint8_t const *lights, uint8_t num);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
