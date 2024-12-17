@@ -1,6 +1,7 @@
 #include "controller_simulator.h"
 #include <string.h>
 #include <stdio.h>
+#include "hardware/clocks.h"
 
 uint smCmdReader;
 uint smDatWriter;
@@ -53,7 +54,7 @@ uint8_t RECV_CMD() {
 	return read_byte_blocking(PSX_PIO, smCmdReader);
 }
 
-void initController() {
+/*void initController() {
 	mode = MODE_DIGITAL;
 	config = false;
 	analogLock = false;
@@ -62,7 +63,7 @@ void initController() {
 	pollConfig[1] = 0xFF;
 	pollConfig[2] = 0x03;
 	pollConfig[3] = 0x00;
-}
+}*/
 
 void processRumble(uint8_t index, uint8_t value) {
 	//if(index == 0 || index > 5)
@@ -369,7 +370,10 @@ void simulation_thread() {
 	multicore_lockout_victim_init();
 	while(true) {
 		if(RECV_CMD() == 0x01) {
+			gpio_put(25, true);
 			process_joy_req();
+		} else {
+			gpio_put(25, false);
 		}
 	}
 }
@@ -385,6 +389,7 @@ void __time_critical_func(restart_pio_sm)() {
     // resetting and launching core1 here allows to perform the reset of the transaction (e.g. when PSX polls for new MC without completing the read)
     multicore_reset_core1();
     multicore_launch_core1(simulation_thread);
+
     pio_enable_sm_mask_in_sync(PSX_PIO, 1 << smCmdReader | 1 << smDatWriter);
 }
 
@@ -396,11 +401,6 @@ void __time_critical_func(process()) {
 }
 
 void init_pio() {
-	gpio_init(PIN_DAT);
-	gpio_init(PIN_CMD);
-	gpio_init(PIN_SEL);
-	gpio_init(PIN_CLK);
-	gpio_init(PIN_ACK);
 	gpio_set_dir(PIN_DAT, false);
 	gpio_set_dir(PIN_CMD, false);
 	gpio_set_dir(PIN_SEL, false);
@@ -422,11 +422,20 @@ void init_pio() {
 	dat_writer_program_init(PSX_PIO, smDatWriter, offsetDatWriter);
 }
 
-void selCallback(uint gpio, uint32_t event) {
+/*void selCallback(uint gpio, uint32_t event) {
 	if(gpio != PIN_SEL && event & GPIO_IRQ_EDGE_RISE)
 		return;
-
+	
 	restart_pio_sm();
+}*/
+
+void __time_critical_func(sel_isr_callback()) {
+    // TODO refractor comment, also is __time_critical_func needed for speed? we should test if everything works without it!
+    /* begin inlined call of:  gpio_acknowledge_irq(PIN_SEL, GPIO_IRQ_EDGE_RISE); kept in RAM for performance reasons */
+    check_gpio_param(PIN_SEL);
+    iobank0_hw->intr[PIN_SEL / 8] = GPIO_IRQ_EDGE_RISE << (4 * (PIN_SEL % 8));
+    /* end of inlined call */
+    restart_pio_sm();
 }
 
 //static void reconnect(btstack_timer_source_t *ts) {
@@ -440,20 +449,34 @@ void psx_init(){
 	init_pio();
 	gpio_init(25);
     gpio_set_dir(25, GPIO_OUT);
-	gpio_put(25, true);
 	printf("PIO Init Finished\n");
-	gpio_set_slew_rate(PIN_DAT, GPIO_SLEW_RATE_FAST);
-	gpio_set_drive_strength(PIN_DAT, GPIO_DRIVE_STRENGTH_12MA);
-	initController();
-	gpio_set_irq_enabled_with_callback(PIN_SEL, GPIO_IRQ_EDGE_RISE, false, selCallback);
-	printf("Simulator started!\n");
+	
+	/* Setup SEL interrupt on GPIO */
+    // gpio_set_irq_enabled_with_callback(PIN_SEL, GPIO_IRQ_EDGE_RISE, true, my_gpio_callback);  // decomposed into:
 	gpio_set_irq_enabled(PIN_SEL, GPIO_IRQ_EDGE_RISE, true);
+    irq_set_exclusive_handler(IO_IRQ_BANK0, sel_isr_callback); // instead of normal gpio_set_irq_callback() which has slower handling
+    irq_set_enabled(IO_IRQ_BANK0, true);
+
+    /* Setup additional GPIO configuration options */
+    gpio_set_slew_rate(PIN_DAT, GPIO_SLEW_RATE_FAST);
+    gpio_set_drive_strength(PIN_DAT, GPIO_DRIVE_STRENGTH_12MA);
+	
+	printf("Simulator started!\n");
+
 	multicore_launch_core1(simulation_thread);
 }
 
+// Current mapping: Triangle, Circle, R1, Cross, L1, Square, R2, DPad_Up, L2, Start, Select
+
+// A quirk of the Pop'n controller, the "D-Pad" left right and down buttons are always pressed.
+	// Likely this was a simple way to identify their controllers by always reporting this button combination,
+	// since it was both impossible for a normal pad to do and quite impractical to imitate without
+	// some level of hardware tampering. This also meant they could just have the pad identify as a seemingly
+	// normal PS1 digital pad to work with the standard pad libraries across the board.
+
 void psx_task(uint16_t but) {
     inputState.buttons1 = ~(((but & 0x400 ? 1 : 0) << 0) | (0 << 1) | (0 << 2) | ((but & 0x200 ? 1 : 0) << 3) |
-		                    ((but & 0x080 ? 1 : 0) << 4) | (0 << 5) | (0 << 6) | (0 << 7));
+		                    ((but & 0x080 ? 1 : 0) << 4) | (1 << 5) | (1 << 6) | (1 << 7));
     inputState.buttons2 = ~(((but & 0x100 ? 1 : 0) << 0) | ((but & 0x040 ? 1 : 0) << 1) | ((but & 0x010 ? 1 : 0) << 2) | ((but & 0x004 ? 1 : 0) << 3) |
 		              ((but & 0x001 ? 1 : 0) << 4) | ((but & 0x002 ? 1 : 0) << 5) | ((but & 0x008 ? 1 : 0) << 6) | ((but & 0x020 ? 1 : 0) << 7));
 }

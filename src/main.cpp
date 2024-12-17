@@ -22,7 +22,9 @@
 #include "controller_simulator.h" //PlayStation mode
 
 #define BUTTON_LIGHT_MAX_NUM 32 /* Must be larger than number of buttons */
+#define TUD_MOUNT_TIMEOUT	1500
 bool button_lights[BUTTON_LIGHT_MAX_NUM] = {0};
+bool tud_mount_status = false;
 bool psx_enabled = false;
 
 struct report
@@ -41,14 +43,11 @@ void boot_check()
 {
     uint64_t key1 = (1 << 9);
     uint64_t key2 = (1 << 10);
-	uint64_t key3 = (1 << 4);
     uint64_t buttons = button_read();
     if (buttons & key1) {
         reset_usb_boot(0, 2); //Update Mode Switch
     } else if (buttons & key2) {
 		dreamcast_main(); //Dreamcast Mode Switch
-	} else if (buttons & key3) {
-		psx_enabled = true; //PlayStation Mode Switch
 	}
 }
 
@@ -59,8 +58,6 @@ void init()
     button_init();
 	boot_check();
 	tusb_init();
-	if (psx_enabled == true) { psx_init(); }
-	else { rgb_init(); }
     config_init();
 }
 
@@ -72,6 +69,7 @@ int main(void)
     {
         tud_task();
         report.buttons = button_read();
+		if(to_ms_since_boot(get_absolute_time()) > TUD_MOUNT_TIMEOUT && !tud_mount_status && !psx_enabled) { psx_init(); psx_enabled = true; } //PlayStation Mode Switch
 		if (psx_enabled == true) { psx_task(report.buttons); }
         main_loop();
         button_update();
@@ -79,6 +77,13 @@ int main(void)
     }
 
     return 0;
+}
+
+// Invoked when device is mounted
+void tud_mount_cb(void) {
+	tud_mount_status = true;
+	rgb_init();
+	config_init();
 }
 
 // Invoked when received GET_REPORT control request
