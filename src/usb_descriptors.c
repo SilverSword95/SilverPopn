@@ -24,7 +24,7 @@
  */
 
 #include "usb_descriptors.h"
-
+#include "pico/unique_id.h"
 #include "tusb.h"
 
 /* A combination of interfaces must have a unique product id, since PC will save
@@ -126,12 +126,14 @@ uint8_t const* tud_descriptor_configuration_cb(uint8_t index) {
 // String Descriptors
 //--------------------------------------------------------------------+
 
+static char serial_number_str[24] = "123456\0";
+
 // array of pointer to string descriptors
 char const* string_desc_arr[] = {
     (const char[]){0x09, 0x04},  // 0: is supported language is English (0x0409)
-    "SilverSword",                     // 1: Manufacturer
+    "SilverSword",                // 1: Manufacturer
     "SilverPopn Controller",      // 2: Product
-    "123456",                    // 3: Serials, should use chip ID
+    serial_number_str,            // 3: Serials, should use chip ID
     "Button 1",
     "Button 2",
     "Button 3",
@@ -143,8 +145,6 @@ char const* string_desc_arr[] = {
     "Button 9",
     "Aux 1",
     "Aux 2",
-//    "Ext 1",
-//    "Ext 2",
     "Logo Red",
     "Logo Green",
     "Logo Blue"
@@ -158,11 +158,15 @@ static uint16_t _desc_str[64];
 uint16_t const* tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
   (void)langid;
 
-  uint8_t chr_count;
+  uint8_t chr_count = 0;
 
   if (index == 0) {
     memcpy(&_desc_str[1], string_desc_arr[0], 2);
     chr_count = 1;
+  } else if (index == 3) {
+	pico_unique_board_id_t board_id;
+    pico_get_unique_board_id(&board_id);
+    sprintf(serial_number_str, "%016llx", *(uint64_t *)&board_id);
   } else {
     // Note: the 0xEE index string is a Microsoft OS 1.0 Descriptors.
     // https://docs.microsoft.com/en-us/windows-hardware/drivers/usbcon/microsoft-defined-usb-descriptors
