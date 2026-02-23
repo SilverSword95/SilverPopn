@@ -18,7 +18,11 @@
 #include "rgb.h"
 #include "config.h"
 
+#define MAPLE_EN //Dreamcast mode support, comment if you want to disable it
+
+#ifdef MAPLE_EN
 #include "maple.h" //Dreamcast mode
+#endif
 #include "controller_simulator.h" //PlayStation mode
 
 #define BUTTON_LIGHT_MAX_NUM 32 /* Must be larger than number of buttons */
@@ -42,13 +46,18 @@ void main_loop()
 void boot_check()
 {
     uint64_t key1 = (1 << 9);
+#ifdef MAPLE_EN
     uint64_t key2 = (1 << 10);
+#endif
     uint64_t buttons = button_read();
     if (buttons & key1) {
         reset_usb_boot(0, 2); //Update Mode Switch
-    } else if (buttons & key2) {
+    }
+#ifdef MAPLE_EN
+	else if (buttons & key2) {
 		dreamcast_main(); //Dreamcast Mode Switch
 	}
+#endif
 }
 
 void init()
